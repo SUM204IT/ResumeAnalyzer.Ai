@@ -7,11 +7,17 @@ import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import ResumeAnalysis from "./pages/Analysis";
+import Features from "./pages/Features";
 import { Toaster } from "react-hot-toast";
 
 import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "./redux/slices/authSlice";
 import { Provider } from "react-redux";
+
+import ProtectedRoute from "./components/ProtectedRoute";
+import Pricing from "./pages/Pricing";
+import Blog from "./pages/Blog";
 
 export const store = configureStore({
   reducer: {
@@ -29,12 +35,20 @@ root.render(
     <BrowserRouter>
       <React.StrictMode>
         <Toaster />
-        <Navbar />
+        {/* <Navbar /> */}
         <Routes>
           <Route path="/" element={<App />} />
           <Route path="/home" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/analysis" element={
+            <ProtectedRoute>
+              <ResumeAnalysis/>
+            </ProtectedRoute>
+          } />
+          <Route path="/features" element={<Features/>} />
+          <Route path="/pricing" element={<Pricing/>} />
+          <Route path="/blog" element={<Blog/>} />
         </Routes>
       </React.StrictMode>
     </BrowserRouter>

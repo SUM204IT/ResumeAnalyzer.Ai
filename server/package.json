@@ -25,12 +25,14 @@
     "express-fileuploader": "^0.0.7",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.2.2",
+    "multer": "^2.1.1",
     "node-schedule": "^2.1.1",
     "nodemailer": "^8.0.3",
     "nodemon": "^3.1.14",
     "openai": "^6.33.0",
     "otp-generator": "^4.0.1",
     "pdf-parse": "^2.4.5",
+    "pdf-poppler": "^0.2.3",
     "razorpay": "^2.9.6",
     "tesseract.js": "^7.0.0"
   }

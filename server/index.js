@@ -5,7 +5,7 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 dotenv.config();
 const PORT = process.env.PORT || 4000;
-
+const fileupload = require("express-fileupload");
 
 //middlewares
 app.use(express.json());
@@ -16,23 +16,30 @@ app.use(
         credentials:true,
     })
 )
-// app.use(
-//     fileUpload({
-//         useTempFile:true,
-//         tempFileDir:"/tmp",
-//     })
-// );
+
+app.use(
+    fileupload({
+        useTempFile:true,
+        tempFileDir:"/tmp",
+    })
+);
+
+//cloud se connect krna hai
+const cloudinary = require("./config/cloudinary");
+cloudinary.cloudinaryConnect();
 
 
 //routes
 const userRoutes = require("./routes/User");
 const analyze = require("./routes/Analyze");
+const Upload = require("./routes/FileUpload");
 
 
 
 //mounting the routes
 app.use("/api/v1/auth", userRoutes);
 app.use("/api/v1", analyze);
+app.use("/api/v1/upload", Upload);
 
 
 //dbconnection

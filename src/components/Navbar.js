@@ -1,8 +1,18 @@
 import React from "react";
-import { Link } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { logout } from "../redux/slices/authSlice";
 
 export default function Navbar() {
+
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  function logoutHandler(){
+    dispatch(logout());
+    localStorage.removeItem("token");
+    navigate("/");
+  }
   
   const { isAuthenticated, user } = useSelector((state) => state.auth);
 
@@ -21,7 +31,7 @@ export default function Navbar() {
         Home
         </Link>
         
-        <Link to="/feature" className="hover:text-blue-600 transition">
+        <Link to="/features" className="hover:text-blue-600 transition">
         Features
         </Link>
 
@@ -38,9 +48,14 @@ export default function Navbar() {
       {/* Button */}
       {
         isAuthenticated ? (
-          <button className="bg-blue-600 text-white px-5 py-2 rounded-xl shadow hover:bg-blue-700 transition">
-        <Link to="/princing">Get Started</Link>
+          <div className="flex flex-row gap-5">
+            <button className="bg-blue-600 text-white px-5 py-2 rounded-xl shadow hover:bg-blue-700 transition">
+        <Link to="/pricing">Get Started</Link>
       </button>
+      <button className="bg-blue-600 text-white px-5 py-2 rounded-xl shadow hover:bg-blue-700 transition" onClick={logoutHandler}>
+        Logout
+      </button>
+          </div>
         ) : 
         (<button className="bg-blue-600 text-white px-5 py-2 rounded-xl shadow hover:bg-blue-700 transition">
         <Link to="/login">Login</Link>

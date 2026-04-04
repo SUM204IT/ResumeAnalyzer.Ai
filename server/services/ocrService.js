@@ -1,46 +1,24 @@
 const Tesseract = require("tesseract.js");
-const axios = require("axios");
-const fs = require("fs");
-const path = require("path");
-const {pdfParse} = require("pdf-parse");
+const pdfParse = require("pdf-parse");
 
-const extractTextFromPDF = async (fileUrl) => {
-  const response = await axios.get(fileUrl, {
-    responseType: "arraybuffer",
-    headers: {
-      "User-Agent": "Mozilla/5.0", // avoids 403
-    },
-  });
-
-  const data = await pdfParse(response.data);
-  return data.text;
+const extractTextFromPDF = async (fileBuffer) => {
+  try {
+    const data = await pdfParse(fileBuffer);
+    return data.text;
+  } catch (err) {
+    console.error("PDF parse error:", err);
+    throw new Error("Failed to parse PDF");
+  }
 };
 
-const extractTextFromImage = async (imageUrl) => {
-  const filePath = path.join(__dirname, "temp.jpg");
-
-  // ✅ Download image
-  const response = await axios({
-    url: imageUrl,
-    method: "GET",
-    responseType: "stream",
-  });
-
-  const writer = fs.createWriteStream(filePath);
-  response.data.pipe(writer);
-
-  await new Promise((resolve, reject) => {
-    writer.on("finish", resolve);
-    writer.on("error", reject);
-  });
-
-  // ✅ Run OCR on local file
-  const result = await Tesseract.recognize(filePath, "eng");
-
-  // ✅ Delete temp file (optional)
-  fs.unlinkSync(filePath);
-
-  return result.data.text;
+const extractTextFromImage = async (fileBuffer) => {
+  try {
+    const result = await Tesseract.recognize(fileBuffer, "eng");
+    return result.data.text;
+  } catch (err) {
+    console.error("OCR Error:", err);
+    throw new Error("Failed to extract text from image");
+  }
 };
 
 module.exports = {

@@ -1,56 +1,118 @@
+const fs = require("fs");
 const { analyzeResumeWithAI } = require("../services/aiServices");
-const { extractTextFromImage } = require("../services/ocrService");
-const {extractTextFromPDF} = require("../services/ocrService"); // ✅ correct import
+const { extractTextFromImage, extractTextFromPDF } = require("../services/ocrService");
+const Resume = require("../models/Resume");
 
 const analyzeResume = async (req, res) => {
   try {
-    const { fileUrl } = req.body;
+    const { filePath } = req.body;
 
-    if (!fileUrl) {
-      return res.status(400).json({ error: "Resume file is required" });
-    }
-
-    let resumeText = "";
-
-    // ✅ IMAGE FILE
-    if (fileUrl.match(/\.(jpg|jpeg|png)$/i)) {
-      resumeText = await extractTextFromImage(fileUrl);
-    }
-
-    // ✅ PDF FILE
-    else if (fileUrl.match(/\.pdf$/i)) {
-      resumeText = await extractTextFromPDF(fileUrl);
-    }
-
-    // ❌ Unsupported
-    else {
+    if (!filePath) {
       return res.status(400).json({
-        error: "Unsupported file type (only PDF, JPG, PNG allowed)",
+        success: false,
+        message: "File path is required",
       });
     }
 
-    // ✅ Send to AI
-    let data = await analyzeResumeWithAI(resumeText);
+    // ✅ read file
+    const fileBuffer = fs.readFileSync(filePath);
 
-    // ✅ Clean AI response
-    data = data.replace(/```json|```/g, "").trim();
+    let resumeText = "";
 
-    const jsonMatch = data.match(/\{[\s\S]*\}/);
+    // ✅ PDF handling
+    if (filePath.endsWith(".pdf")) {
+      try {
+        console.log("Trying PDF parse...");
+        resumeText = await extractTextFromPDF(fileBuffer);
 
-    if (!jsonMatch) {
-      throw new Error("No JSON found");
+        if (!resumeText || resumeText.trim().length < 50) {
+          return res.status(400).json({
+            success: false,
+            message: "Scanned PDF not supported yet",
+          });
+        }
+
+      } catch (err) {
+        console.log("PDF parse failed");
+        return res.status(400).json({
+          success: false,
+          message: "Failed to parse PDF",
+        });
+      }
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    // ✅ IMAGE handling
+    else if (
+      filePath.endsWith(".png") ||
+      filePath.endsWith(".jpg") ||
+      filePath.endsWith(".jpeg")
+    ) {
+      resumeText = await extractTextFromImage(fileBuffer);
+    }
 
-    res.json(parsed);
+    else {
+      return res.status(400).json({
+        success: false,
+        message: "Unsupported file type",
+      });
+    }
+
+
+    // ✅ AI analysis
+    let aiResponse = await analyzeResumeWithAI(resumeText);
+
+    aiResponse = aiResponse.replace(/```json|```/g, "").trim();
+
+    // ✅ safe JSON parse
+    const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+
+    if (!jsonMatch) {
+      return res.status(500).json({
+        success: false,
+        message: "Invalid AI response format",
+      });
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonMatch[0]);
+    } catch (err) {
+      return res.status(500).json({
+        success: false,
+        message: "Error parsing AI response",
+      });
+    }
+
+    // ✅ get user
+    const userId = req.user.id;
+
+    // ✅ SAVE FULL DATA
+    await Resume.create({
+      user: userId,
+      filePath: filePath,
+      score: parsed.score,
+      atsScore: parsed.atsScore,
+      grammarIssues: parsed.grammarIssues,
+      improvedSummary: parsed.improvedSummary,
+      jobMatch: parsed.jobMatch,
+      missingKeywords: parsed.missingKeywords,
+      sectionFeedback: parsed.sectionFeedback,
+      strengths: parsed.strengths,
+      suggestions: parsed.suggestions,
+      weaknesses: parsed.weaknesses,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: parsed,
+    });
 
   } catch (err) {
     console.error("Analyze Error:", err);
 
-    res.status(500).json({
-      error: "Invalid AI response",
-      message: err.message,
+    return res.status(500).json({
+      success: false,
+      message: "Analysis failed",
     });
   }
 };

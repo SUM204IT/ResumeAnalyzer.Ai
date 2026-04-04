@@ -3,9 +3,13 @@ import { Upload, FileText, CheckCircle, BarChart3 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { apiConnector } from "../services/apiConnector";
 import { apiurl } from "../services/api";
+import { useNavigate } from "react-router-dom";
+import Navbar from "../components/Navbar";
 
 export default function Home() {
-  const { isAuthenticated, user } = useSelector((state) => state.auth);
+  const navigate = useNavigate();
+
+  const { isAuthenticated, user, token } = useSelector((state) => state.auth);
 
   const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
@@ -14,54 +18,86 @@ export default function Home() {
   const handleClick = () => fileInputRef.current.click();
 
   const handleFileChange = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+    const file = e.target.files[0];
+    if (!file) return;
 
-  const allowedTypes = [
-    "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "image/png",
-    "image/jpeg",
-    "image/jpg"
-  ];
+    const allowedTypes = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "image/png",
+      "image/jpeg",
+      "image/jpg",
+    ];
 
-  if (!allowedTypes.includes(file.type)) {
-    return setMessage("Only PDF, DOC, or Image files allowed");
-  }
+    if (!allowedTypes.includes(file.type)) {
+      return setMessage("Only PDF, DOC, or Image files allowed");
+    }
 
-  if (file.size > 2 * 1024 * 1024) {
-    return setMessage("File must be under 2MB");
-  }
+    if (file.size > 2 * 1024 * 1024) {
+      return setMessage("File must be under 2MB");
+    }
 
-  try {
-    setLoading(true);
-    setMessage("");
+    try {
+      setLoading(true);
+      setMessage("");
 
-    const formData = new FormData();
-    formData.append("resume", file);
+      const formData = new FormData();
+      formData.append("file", file);
 
-    const res = await apiConnector("POST", apiurl.RESUMEANALYZER_API, {
-      file:formData
-    })
+      // ✅ STEP 1: Upload file (LOCAL STORAGE)
+      const uploadRes = await apiConnector(
+        "POST",
+        apiurl.LOCALFILEUPLOAD_API,
+        formData,
+      );
 
-    const data = await res.json();
-    console.log(data);
+      console.log("Upload Response:", uploadRes.data);
 
-    if (!res.ok) throw new Error(data.message || "Upload failed");
+      if (!uploadRes.data.success) {
+        throw new Error(uploadRes.data.message || "Upload failed");
+      }
 
-    setMessage("Resume uploaded successfully ✅");
+      // ✅ IMPORTANT: get filePath from backend
+      const filePath = uploadRes.data.filePath;
+      console.log("filePath:::", filePath);
 
-  } catch (err) {
-    setMessage(err.message);
-  } finally {
-    setLoading(false);
-  }
-};
+      // ❗ safety check
+      if (!filePath) {
+        throw new Error("File path not received from server");
+      }
+
+      console.log("calling ai::");
+      // ✅ STEP 2: Call analyze API using filePath
+      const analyzeRes = await apiConnector(
+        "POST",
+        apiurl.RESUMEANALYZER_API,
+        { filePath }, // 🔥 sending path, not file
+        {
+          "Content-Type": "application/json", // ✅ FORCE JSON
+          Authorization: `Bearer ${token}`,
+        },
+      );
+
+      console.log("Analyze Response:", analyzeRes.data);
+
+      if (!analyzeRes.data.success) {
+        throw new Error(analyzeRes.data.message || "Analysis failed");
+      }
+
+      // ✅ SUCCESS
+      setMessage("Resume analyzed successfully ✅");
+      navigate("/analysis");
+    } catch (err) {
+      setMessage(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white text-gray-800">
-      
+      <Navbar />
       {/* Hidden File Input */}
       <input
         type="file"
@@ -77,11 +113,18 @@ export default function Home() {
           Analyze Your Resume with AI in Seconds
         </h2>
         <p className="text-lg md:text-xl text-gray-600 mb-10 max-w-2xl mx-auto">
-          Get instant insights, keyword suggestions, and formatting tips to improve your resume and land your dream job.
+          Get instant insights, keyword suggestions, and formatting tips to
+          improve your resume and land your dream job.
         </p>
 
         <button
-          onClick={handleClick}
+          onClick={() => {
+            if (token) {
+              handleClick();
+            } else {
+              navigate("/login");
+            }
+          }}
           disabled={loading}
           className="flex items-center gap-2 mx-auto bg-blue-600 text-white px-8 py-4 rounded-2xl text-lg shadow-lg hover:bg-blue-700 transition disabled:opacity-50"
         >
@@ -89,9 +132,7 @@ export default function Home() {
           {loading ? "Uploading..." : "Upload Your Resume"}
         </button>
 
-        {message && (
-          <p className="mt-4 text-sm text-gray-700">{message}</p>
-        )}
+        {message && <p className="mt-4 text-sm text-gray-700">{message}</p>}
       </section>
 
       {/* Features Section */}
@@ -108,9 +149,21 @@ export default function Home() {
           How It Works
         </h3>
         <div className="max-w-5xl mx-auto grid md:grid-cols-3 gap-10 text-center">
-          <Step number="1" title="Upload Resume" desc="Upload your resume in PDF or DOCX format." />
-          <Step number="2" title="AI Analysis" desc="Our AI scans and analyzes your resume instantly." />
-          <Step number="3" title="Get Insights" desc="Receive tips and suggestions to improve." />
+          <Step
+            number="1"
+            title="Upload Resume"
+            desc="Upload your resume in PDF or DOCX format."
+          />
+          <Step
+            number="2"
+            title="AI Analysis"
+            desc="Our AI scans and analyzes your resume instantly."
+          />
+          <Step
+            number="3"
+            title="Get Insights"
+            desc="Receive tips and suggestions to improve."
+          />
         </div>
       </section>
 
@@ -120,12 +173,23 @@ export default function Home() {
           Why Choose ResumeAI?
         </h3>
         <p className="text-gray-600 max-w-3xl mx-auto mb-12">
-          ResumeAI uses advanced machine learning to ensure your resume passes ATS systems and stands out to recruiters. Trusted by thousands of job seekers worldwide.
+          ResumeAI uses advanced machine learning to ensure your resume passes
+          ATS systems and stands out to recruiters. Trusted by thousands of job
+          seekers worldwide.
         </p>
         <div className="grid md:grid-cols-3 gap-10">
-          <Card title="Fast Results" desc="Get feedback in seconds, not hours." />
-          <Card title="Accurate Analysis" desc="Built with real hiring data and ATS logic." />
-          <Card title="Easy to Use" desc="Simple interface designed for everyone." />
+          <Card
+            title="Fast Results"
+            desc="Get feedback in seconds, not hours."
+          />
+          <Card
+            title="Accurate Analysis"
+            desc="Built with real hiring data and ATS logic."
+          />
+          <Card
+            title="Easy to Use"
+            desc="Simple interface designed for everyone."
+          />
         </div>
       </section>
 
@@ -163,4 +227,4 @@ function Card({ title, desc }) {
       <p className="text-gray-600">{desc}</p>
     </div>
   );
-}
+}   

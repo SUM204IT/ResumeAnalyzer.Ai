@@ -1,9 +1,9 @@
 const express = require("express");
+const { analyzeResume } = require("../controllers/analyzeController");
+const { auth } = require("../middlewares/Auth");
+
 const router = express.Router();
 
-const {analyzeResume} = require("../controllers/analyzeController");
-
-router.post("/analyze-resume", analyzeResume);
-
+router.post("/analyze-resume", auth, analyzeResume);
 
 module.exports = router;

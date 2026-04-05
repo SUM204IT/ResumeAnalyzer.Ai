@@ -18,6 +18,7 @@ import { Provider } from "react-redux";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Pricing from "./pages/Pricing";
 import Blog from "./pages/Blog";
+import Uploads from "./pages/Uploads";
 
 export const store = configureStore({
   reducer: {
@@ -49,6 +50,11 @@ root.render(
           <Route path="/features" element={<Features/>} />
           <Route path="/pricing" element={<Pricing/>} />
           <Route path="/blog" element={<Blog/>} />
+          <Route path="/uploads" element={
+            <ProtectedRoute>
+              <Uploads/>
+            </ProtectedRoute>
+          } />
         </Routes>
       </React.StrictMode>
     </BrowserRouter>

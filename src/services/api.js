@@ -5,5 +5,7 @@ export const apiurl = {
     LOGINAPI_URL:BASE_URL + "/auth/login",
     SENDOTPAPI_URL:BASE_URL + "/auth/sendotp",
     RESUMEANALYZER_API:BASE_URL + "/analyze-resume",
-    LOCALFILEUPLOAD_API:BASE_URL + "/upload/localFileUpload"
+    LOCALFILEUPLOAD_API:BASE_URL + "/upload/localFileUpload",
+    GETUSERRESUME_API: BASE_URL + "/get-my-resume",
+    GETALLANALYSIS_API: BASE_URL + "/get-all-analysis",
 }

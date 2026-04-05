@@ -1,6 +1,9 @@
 const fs = require("fs");
 const { analyzeResumeWithAI } = require("../services/aiServices");
-const { extractTextFromImage, extractTextFromPDF } = require("../services/ocrService");
+const {
+  extractTextFromImage,
+  extractTextFromPDF,
+} = require("../services/ocrService");
 const Resume = require("../models/Resume");
 
 const analyzeResume = async (req, res) => {
@@ -31,7 +34,6 @@ const analyzeResume = async (req, res) => {
             message: "Scanned PDF not supported yet",
           });
         }
-
       } catch (err) {
         console.log("PDF parse failed");
         return res.status(400).json({
@@ -48,15 +50,12 @@ const analyzeResume = async (req, res) => {
       filePath.endsWith(".jpeg")
     ) {
       resumeText = await extractTextFromImage(fileBuffer);
-    }
-
-    else {
+    } else {
       return res.status(400).json({
         success: false,
         message: "Unsupported file type",
       });
     }
-
 
     // ✅ AI analysis
     let aiResponse = await analyzeResumeWithAI(resumeText);
@@ -106,7 +105,6 @@ const analyzeResume = async (req, res) => {
       success: true,
       data: parsed,
     });
-
   } catch (err) {
     console.error("Analyze Error:", err);
 
@@ -117,4 +115,45 @@ const analyzeResume = async (req, res) => {
   }
 };
 
-module.exports = { analyzeResume };
+const getUserResumes = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const resumes = await Resume.findOne({ user: userId }).sort({
+      createdAt: -1,
+    });
+
+    res.json({
+      success: true,
+      data: resumes,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch resumes",
+    });
+  }
+};
+
+const getAllAnalysis = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const resumes = await Resume.find({ user: userId }).sort({
+      createdAt: -1,
+    });
+
+    res.json({
+      success: true,
+      data: resumes,
+    });
+  } catch (error) {
+    console.log("Error in getting all anlysis::", error);
+    res.status(500).json({
+      success:false,
+      message:"Failed to fetch all analysis."
+    })
+  }
+}
+
+module.exports = { analyzeResume, getUserResumes, getAllAnalysis};

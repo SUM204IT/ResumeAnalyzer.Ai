@@ -3,7 +3,7 @@ import { Upload, FileText, CheckCircle, BarChart3 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { apiConnector } from "../services/apiConnector";
 import { apiurl } from "../services/api";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 
 export default function Home() {
@@ -117,7 +117,8 @@ export default function Home() {
           improve your resume and land your dream job.
         </p>
 
-        <button
+        <div className="flex flex-col gap-5">
+          <button
           onClick={() => {
             if (token) {
               handleClick();
@@ -131,6 +132,10 @@ export default function Home() {
           <Upload size={20} />
           {loading ? "Uploading..." : "Upload Your Resume"}
         </button>
+        <button className="flex items-center gap-2 mx-auto bg-blue-600 text-white px-8 py-4 rounded-2xl text-lg shadow-lg hover:bg-blue-700 transition disabled:opacity-50">
+          <Link to={"/uploads"} >Your Analysis History</Link>
+        </button>
+        </div>
 
         {message && <p className="mt-4 text-sm text-gray-700">{message}</p>}
       </section>

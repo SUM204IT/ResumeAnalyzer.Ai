@@ -2,7 +2,7 @@ import React from "react";
 import { useState } from "react";
 import { apiConnector } from "../services/apiConnector";
 import { apiurl } from "../services/api";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useDispatch } from "react-redux";
 import { login } from "../redux/slices/authSlice";
@@ -108,9 +108,14 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="text-sm text-blue-600 mt-4 text-center cursor-pointer">
+        <div className="flex flex-col gap-1">
+          <p className="text-sm text-blue-600 mt-4 text-center cursor-pointer">
           Forgot Password?
         </p>
+        <p className="text-sm text-blue-600 mt-4 text-center cursor-pointer">
+          Don't have an account, please <Link to={"/signup"} className="text-red-700 underline">Signup</Link>
+        </p>
+        </div>
       </div>
     </div>
   );

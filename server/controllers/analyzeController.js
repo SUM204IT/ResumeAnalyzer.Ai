@@ -5,6 +5,7 @@ const {
   extractTextFromPDF,
 } = require("../services/ocrService");
 const Resume = require("../models/Resume");
+const axios = require("axios");
 
 const analyzeResume = async (req, res) => {
   try {
@@ -18,7 +19,11 @@ const analyzeResume = async (req, res) => {
     }
 
     // ✅ read file
-    const fileBuffer = fs.readFileSync(filePath);
+    const response = await axios.get(filePath, {
+      responseType: "arraybuffer",
+    });
+
+    const fileBuffer = response.data;
 
     let resumeText = "";
 
@@ -139,9 +144,7 @@ const getAllAnalysis = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const resumes = await Resume.find({ user: userId }).sort({
-      createdAt: -1,
-    });
+    const resumes = await Resume.find({ user: userId });
 
     res.json({
       success: true,

@@ -4,7 +4,7 @@ const dotenv = require("dotenv");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 dotenv.config();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 5000;
 const fileupload = require("express-fileupload");
 
 //middlewares

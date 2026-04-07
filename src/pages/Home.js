@@ -1,15 +1,16 @@
 import React, { useRef, useState } from "react";
 import { Upload, FileText, CheckCircle, BarChart3 } from "lucide-react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { apiConnector } from "../services/apiConnector";
 import { apiurl } from "../services/api";
 import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import { logout } from "../redux/slices/authSlice";
 
 export default function Home() {
   const navigate = useNavigate();
-
-  const { isAuthenticated, user, token } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
+  const { token } = useSelector((state) => state.auth);
 
   const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
@@ -45,191 +46,183 @@ export default function Home() {
       const formData = new FormData();
       formData.append("file", file);
 
-      // ✅ STEP 1: Upload file (LOCAL STORAGE)
+      // 🔹 Upload File
       const uploadRes = await apiConnector(
         "POST",
         apiurl.LOCALFILEUPLOAD_API,
-        formData,
+        formData
       );
-
-      console.log("Upload Response:", uploadRes.data);
 
       if (!uploadRes.data.success) {
         throw new Error(uploadRes.data.message || "Upload failed");
       }
 
-      // ✅ IMPORTANT: get filePath from backend
       const filePath = uploadRes.data.filePath;
-      console.log("filePath:::", filePath);
+      if (!filePath) throw new Error("File path missing");
 
-      // ❗ safety check
-      if (!filePath) {
-        throw new Error("File path not received from server");
-      }
-
-      console.log("calling ai::");
-      // ✅ STEP 2: Call analyze API using filePath
+      // 🔹 Analyze Resume
       const analyzeRes = await apiConnector(
         "POST",
         apiurl.RESUMEANALYZER_API,
-        { filePath }, // 🔥 sending path, not file
+        { filePath },
         {
-          "Content-Type": "application/json", // ✅ FORCE JSON
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
-        },
+        }
       );
-
-      console.log("Analyze Response:", analyzeRes.data);
 
       if (!analyzeRes.data.success) {
         throw new Error(analyzeRes.data.message || "Analysis failed");
       }
 
-      // ✅ SUCCESS
-      setMessage("Resume analyzed successfully ✅");
+      setMessage("✅ Resume analyzed successfully!");
       navigate("/analysis");
+
     } catch (err) {
-      setMessage(err.message);
+      console.log(err);
+
+      if (err?.response?.status === 401) {
+        setMessage("Session expired. Please login again.");
+        dispatch(logout());
+        localStorage.removeItem("token");
+        navigate("/login");
+      } else {
+        setMessage(err.message);
+      }
+
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white text-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 text-gray-800">
+      
       <Navbar />
-      {/* Hidden File Input */}
+
+      {/* Hidden Input */}
       <input
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
         className="hidden"
-        accept=".pdf,.doc,.docx"
+        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
       />
 
-      {/* Hero Section */}
-      <section className="text-center py-24 px-6">
-        <h2 className="text-4xl md:text-6xl font-bold mb-6">
-          Analyze Your Resume with AI in Seconds
-        </h2>
-        <p className="text-lg md:text-xl text-gray-600 mb-10 max-w-2xl mx-auto">
-          Get instant insights, keyword suggestions, and formatting tips to
-          improve your resume and land your dream job.
+      {/* HERO */}
+      <section className="text-center py-28 px-6">
+        <h1 className="text-5xl md:text-6xl font-extrabold mb-6 leading-tight">
+          Smart Resume Analysis <br />
+          <span className="text-blue-600">Powered by AI</span>
+        </h1>
+
+        <p className="text-lg text-gray-600 mb-10 max-w-2xl mx-auto">
+          Get instant ATS score, keyword insights, and actionable improvements
+          to boost your chances of landing your dream job 🚀
         </p>
 
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col sm:flex-row gap-5 justify-center">
+
+          {/* Upload Button */}
           <button
-          onClick={() => {
-            if (token) {
-              handleClick();
-            } else {
-              navigate("/login");
-            }
-          }}
-          disabled={loading}
-          className="flex items-center gap-2 mx-auto bg-blue-600 text-white px-8 py-4 rounded-2xl text-lg shadow-lg hover:bg-blue-700 transition disabled:opacity-50"
-        >
-          <Upload size={20} />
-          {loading ? "Uploading..." : "Upload Your Resume"}
-        </button>
-        <button className="flex items-center gap-2 mx-auto bg-blue-600 text-white px-8 py-4 rounded-2xl text-lg shadow-lg hover:bg-blue-700 transition disabled:opacity-50">
-          <Link to={"/uploads"} >Your Analysis History</Link>
-        </button>
+            onClick={() => (token ? handleClick() : navigate("/login"))}
+            disabled={loading}
+            className="flex items-center justify-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-2xl text-lg shadow-xl hover:scale-105 hover:bg-blue-700 transition-all disabled:opacity-50"
+          >
+            <Upload size={20} />
+            {loading ? "Uploading..." : "Upload Resume"}
+          </button>
+
+          {/* History */}
+          <Link to="/uploads">
+            <button className="px-8 py-4 rounded-2xl text-lg border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-md">
+              View History
+            </button>
+          </Link>
         </div>
 
-        {message && <p className="mt-4 text-sm text-gray-700">{message}</p>}
+        {message && (
+          <p className="mt-6 text-sm text-gray-700">{message}</p>
+        )}
       </section>
 
-      {/* Features Section */}
-      <section className="py-20 px-6 max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-10 text-center">
-        <Feature icon={<FileText size={32} />} title="ATS Optimization" />
-        <Feature icon={<BarChart3 size={32} />} title="Keyword Analysis" />
-        <Feature icon={<CheckCircle size={32} />} title="Improvement Tips" />
-        <Feature icon={<FileText size={32} />} title="Formatting Check" />
+      {/* FEATURES */}
+      <section className="py-20 px-6 max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
+        <Feature icon={<FileText size={28} />} title="ATS Optimization" />
+        <Feature icon={<BarChart3 size={28} />} title="Keyword Analysis" />
+        <Feature icon={<CheckCircle size={28} />} title="Improvement Tips" />
+        <Feature icon={<FileText size={28} />} title="Formatting Check" />
       </section>
 
-      {/* How It Works */}
-      <section className="py-24 bg-gray-50 px-6">
-        <h3 className="text-3xl md:text-4xl font-bold text-center mb-16">
+      {/* HOW IT WORKS */}
+      <section className="py-24 bg-white px-6">
+        <h2 className="text-4xl font-bold text-center mb-16">
           How It Works
-        </h3>
+        </h2>
+
         <div className="max-w-5xl mx-auto grid md:grid-cols-3 gap-10 text-center">
-          <Step
-            number="1"
-            title="Upload Resume"
-            desc="Upload your resume in PDF or DOCX format."
-          />
-          <Step
-            number="2"
-            title="AI Analysis"
-            desc="Our AI scans and analyzes your resume instantly."
-          />
-          <Step
-            number="3"
-            title="Get Insights"
-            desc="Receive tips and suggestions to improve."
-          />
+          <Step number="1" title="Upload Resume" desc="Upload your file securely" />
+          <Step number="2" title="AI Analysis" desc="We scan using AI models" />
+          <Step number="3" title="Get Insights" desc="Improve instantly" />
         </div>
       </section>
 
-      {/* Extra Section */}
+      {/* WHY CHOOSE */}
       <section className="py-24 px-6 max-w-6xl mx-auto text-center">
-        <h3 className="text-3xl md:text-4xl font-bold mb-8">
-          Why Choose ResumeAI?
-        </h3>
+        <h2 className="text-4xl font-bold mb-8">
+          Why ResumeAI?
+        </h2>
+
         <p className="text-gray-600 max-w-3xl mx-auto mb-12">
-          ResumeAI uses advanced machine learning to ensure your resume passes
-          ATS systems and stands out to recruiters. Trusted by thousands of job
-          seekers worldwide.
+          Built with real hiring patterns and ATS logic to maximize your chances.
         </p>
-        <div className="grid md:grid-cols-3 gap-10">
-          <Card
-            title="Fast Results"
-            desc="Get feedback in seconds, not hours."
-          />
-          <Card
-            title="Accurate Analysis"
-            desc="Built with real hiring data and ATS logic."
-          />
-          <Card
-            title="Easy to Use"
-            desc="Simple interface designed for everyone."
-          />
+
+        <div className="grid md:grid-cols-3 gap-8">
+          <Card title="⚡ Fast" desc="Results in seconds" />
+          <Card title="🎯 Accurate" desc="Real ATS scoring" />
+          <Card title="👌 Simple" desc="Easy UI for everyone" />
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-white border-t py-10 text-center text-gray-500">
-        © {new Date().getFullYear()} ResumeAI. All rights reserved.
+      {/* FOOTER */}
+      <footer className="bg-white border-t py-8 text-center text-gray-500">
+        © {new Date().getFullYear()} ResumeAI
       </footer>
     </div>
   );
 }
 
+/* FEATURE CARD */
 function Feature({ icon, title }) {
   return (
-    <div className="p-6 bg-white rounded-2xl shadow hover:shadow-lg transition">
-      <div className="text-blue-600 flex justify-center mb-4">{icon}</div>
-      <h4 className="font-semibold">{title}</h4>
+    <div className="p-6 bg-white rounded-3xl shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all text-center">
+      <div className="text-blue-600 flex justify-center mb-4">
+        {icon}
+      </div>
+      <h4 className="font-semibold text-lg">{title}</h4>
     </div>
   );
 }
 
+/* STEP */
 function Step({ number, title, desc }) {
   return (
     <div className="p-6">
-      <div className="text-4xl font-bold text-blue-600 mb-4">{number}</div>
+      <div className="text-5xl font-bold text-blue-600 mb-4">
+        {number}
+      </div>
       <h4 className="text-xl font-semibold mb-2">{title}</h4>
       <p className="text-gray-600">{desc}</p>
     </div>
   );
 }
 
+/* CARD */
 function Card({ title, desc }) {
   return (
-    <div className="p-6 bg-white rounded-2xl shadow hover:shadow-lg transition">
+    <div className="p-6 bg-white rounded-3xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all">
       <h4 className="text-xl font-semibold mb-3">{title}</h4>
       <p className="text-gray-600">{desc}</p>
     </div>
   );
-}   
+}

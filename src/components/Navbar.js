@@ -11,11 +11,12 @@ export default function Navbar() {
   function logoutHandler(){
     dispatch(logout());
     localStorage.removeItem("token");
+    navigate("/login");
     navigate("/");
   }
   
   const { token } = useSelector((state) => state.auth);
-
+  
   return (
     <nav className="fixed top-0 left-0 w-full z-50 bg-white border-b border-gray-200 shadow-md px-6 py-4 flex items-center justify-between">
       
@@ -47,7 +48,7 @@ export default function Navbar() {
 
       {/* Button */}
       {
-        token !== null ? (
+        token  ? (
           <div className="flex flex-row gap-5">
             <button className="bg-blue-600 text-white px-5 py-2 rounded-xl shadow hover:bg-blue-700 transition">
         <Link to="/pricing">Get Started</Link>
